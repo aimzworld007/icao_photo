@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { RotateCw, Crop, Maximize as Resize, Download, Undo, Redo, Contrast, Sun, Palette, Scissors } from 'lucide-react';
+import { RotateCw, Crop, Maximize as Resize, Download, Contrast, Sun, Palette, Scissors } from 'lucide-react';
 
 interface ImageEditorProps {
   imageUrl: string;
@@ -11,7 +11,7 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageUrl }) => {
   const [rotation, setRotation] = useState(0);
   const [brightness, setBrightness] = useState(100);
   const [contrast, setContrast] = useState(100);
-  const [cropMode, setCropMode] = useState(false);
+  const [, ] = useState(false);
   
   useEffect(() => {
     loadImageToCanvas();
@@ -239,7 +239,7 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ imageUrl }) => {
       {/* Hidden canvas for image processing */}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
       
-      <style jsx>{`
+      <style>{`
         .slider::-webkit-slider-thumb {
           appearance: none;
           height: 20px;

@@ -5,7 +5,7 @@ interface PdfConverterProps {
   className?: string;
 }
 
-export const PdfConverter: React.FC<PdfConverterProps> = ({ className = '' }) => {
+const PdfConverter: React.FC<PdfConverterProps> = ({ className = '' }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isConverting, setIsConverting] = useState(false);
 
@@ -114,3 +114,5 @@ export const PdfConverter: React.FC<PdfConverterProps> = ({ className = '' }) =>
     </div>
   );
 };
+
+export default PdfConverter;

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Upload, CheckCircle, XCircle, AlertTriangle, Download, RotateCw, Crop, Maximize as Resize, FileText, Zap, Sparkles, Shield } from 'lucide-react';
+import { useState } from 'react';
+import { Upload, CheckCircle, Crop, FileText, Zap, Sparkles, Shield } from 'lucide-react';
 import PhotoUploader from './components/PhotoUploader';
 import VerificationResults from './components/VerificationResults';
 import ImageEditor from './components/ImageEditor';
@@ -8,7 +8,7 @@ import ImageUpscaler from './components/ImageUpscaler';
 
 function App() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [verificationResults, setVerificationResults] = useState<any>(null);
+  const [, setVerificationResults] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'upload' | 'verify' | 'edit' | 'upscale' | 'convert'>('upload');
 
   const handleImageUpload = (imageUrl: string) => {
