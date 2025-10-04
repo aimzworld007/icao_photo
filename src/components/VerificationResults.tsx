@@ -1,23 +1,38 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle, XCircle, AlertTriangle, Eye, Palette, Ruler, Camera, Shield, Sparkles } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Eye, Camera, Shield, Sparkles } from 'lucide-react';
 
-interface VerificationResult {
-  category: string;
-  status: 'pass' | 'fail' | 'warning';
+interface ICAOCheck {
+  passed: boolean;
   message: string;
-  suggestion?: string;
-  icon: React.ReactNode;
+}
+
+interface ICAOVerificationResult {
+  isCompliant: boolean;
+  hasFace: boolean;
+  faceCount: number;
+  checks: {
+    hasSingleFace: ICAOCheck;
+    facePosition: ICAOCheck;
+    eyesOpen: ICAOCheck;
+    mouthClosed: ICAOCheck;
+    headPose: ICAOCheck;
+    glasses: ICAOCheck;
+    lighting: ICAOCheck;
+    background: ICAOCheck;
+  };
+  score: number;
+  suggestions: string[];
 }
 
 interface VerificationResultsProps {
   imageUrl: string;
-  onResults: (results: VerificationResult[]) => void;
+  onResults: (results: any) => void;
 }
 
 const VerificationResults: React.FC<VerificationResultsProps> = ({ imageUrl, onResults }) => {
-  const [results, setResults] = useState<VerificationResult[]>([]);
+  const [result, setResult] = useState<ICAOVerificationResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(true);
-  const [overallScore, setOverallScore] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     analyzeImage();
@@ -25,85 +40,48 @@ const VerificationResults: React.FC<VerificationResultsProps> = ({ imageUrl, onR
 
   const analyzeImage = async () => {
     setIsAnalyzing(true);
-    
-    // Simulate image analysis
-    setTimeout(() => {
-      const analysisResults: VerificationResult[] = [
-        {
-          category: 'Image Quality',
-          status: 'pass',
-          message: 'Image resolution and clarity are acceptable',
-          icon: <Camera className="w-5 h-5" />
-        },
-        {
-          category: 'Background Color',
-          status: 'warning',
-          message: 'Background appears slightly off-white',
-          suggestion: 'Ensure background is pure white or very light off-white',
-          icon: <Palette className="w-5 h-5" />
-        },
-        {
-          category: 'Face Position',
-          status: 'pass',
-          message: 'Face is properly centered and positioned',
-          icon: <Eye className="w-5 h-5" />
-        },
-        {
-          category: 'Image Dimensions',
-          status: 'fail',
-          message: 'Image dimensions do not meet ICAO standards',
-          suggestion: 'Resize image to 35mm × 45mm (minimum 413 × 531 pixels at 300 DPI)',
-          icon: <Ruler className="w-5 h-5" />
-        },
-        {
-          category: 'Shadow Detection',
-          status: 'pass',
-          message: 'No significant shadows detected on face or background',
-          icon: <Eye className="w-5 h-5" />
-        },
-        {
-          category: 'Expression & Eyes',
-          status: 'pass',
-          message: 'Natural expression with eyes open and visible',
-          icon: <Eye className="w-5 h-5" />
-        }
-      ];
+    setError(null);
 
-      setResults(analysisResults);
-      onResults(analysisResults);
+    try {
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-icao-photo`;
 
-      const passCount = analysisResults.filter(r => r.status === 'pass').length;
-      const score = Math.round((passCount / analysisResults.length) * 100);
-      setOverallScore(score);
-      
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ imageUrl }),
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        setError(data.error + (data.details ? ': ' + data.details : ''));
+        setIsAnalyzing(false);
+        return;
+      }
+
+      setResult(data);
+      onResults(data);
       setIsAnalyzing(false);
-    }, 2000);
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pass':
-        return <CheckCircle className="text-green-500" size={20} />;
-      case 'fail':
-        return <XCircle className="text-red-500" size={20} />;
-      case 'warning':
-        return <AlertTriangle className="text-yellow-500" size={20} />;
-      default:
-        return null;
+    } catch (err) {
+      console.error('Error analyzing image:', err);
+      setError('Failed to analyze image. Please try again.');
+      setIsAnalyzing(false);
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pass':
-        return 'bg-green-50 border-green-200';
-      case 'fail':
-        return 'bg-red-50 border-red-200';
-      case 'warning':
-        return 'bg-yellow-50 border-yellow-200';
-      default:
-        return 'bg-gray-50 border-gray-200';
-    }
+  const getStatusIcon = (passed: boolean) => {
+    return passed ? (
+      <CheckCircle className="text-green-500" size={20} />
+    ) : (
+      <XCircle className="text-red-500" size={20} />
+    );
+  };
+
+  const getStatusColor = (passed: boolean) => {
+    return passed ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200';
   };
 
   if (isAnalyzing) {
@@ -126,6 +104,41 @@ const VerificationResults: React.FC<VerificationResultsProps> = ({ imageUrl, onR
     );
   }
 
+  if (error) {
+    return (
+      <div className="max-w-6xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-2xl p-12 text-center border border-red-200">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
+            <AlertTriangle className="text-red-600" size={32} />
+          </div>
+          <h3 className="text-3xl font-bold text-gray-900 mb-4">Analysis Failed</h3>
+          <p className="text-red-600 text-lg">{error}</p>
+          <button
+            onClick={analyzeImage}
+            className="mt-6 px-8 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!result) {
+    return null;
+  }
+
+  const checksList = [
+    { key: 'hasSingleFace', label: 'Single Face Detection', icon: <Eye className="w-5 h-5" /> },
+    { key: 'headPose', label: 'Head Position', icon: <Eye className="w-5 h-5" /> },
+    { key: 'eyesOpen', label: 'Eyes Open & Visible', icon: <Eye className="w-5 h-5" /> },
+    { key: 'mouthClosed', label: 'Neutral Expression', icon: <Eye className="w-5 h-5" /> },
+    { key: 'glasses', label: 'No Glasses', icon: <Eye className="w-5 h-5" /> },
+    { key: 'lighting', label: 'Lighting Quality', icon: <Camera className="w-5 h-5" /> },
+    { key: 'facePosition', label: 'Face Position & Size', icon: <Camera className="w-5 h-5" /> },
+    { key: 'background', label: 'Background', icon: <Camera className="w-5 h-5" /> },
+  ];
+
   return (
     <div className="max-w-7xl mx-auto">
       <div className="text-center mb-8">
@@ -146,91 +159,95 @@ const VerificationResults: React.FC<VerificationResultsProps> = ({ imageUrl, onR
             Your Photo
           </h3>
           <div className="relative">
-            <img 
-              src={imageUrl} 
-              alt="Uploaded photo" 
+            <img
+              src={imageUrl}
+              alt="Uploaded photo"
               className="w-full max-w-md mx-auto rounded-xl shadow-lg"
             />
             <div className="absolute top-4 right-4 bg-white rounded-full p-3 shadow-xl">
               <div className={`w-6 h-6 rounded-full ${
-                overallScore >= 80 ? 'bg-green-500' : 
-                overallScore >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                result.score >= 80 ? 'bg-green-500' :
+                result.score >= 60 ? 'bg-yellow-500' : 'bg-red-500'
               }`}></div>
             </div>
           </div>
-          
+
           {/* Overall Score */}
           <div className="mt-8 text-center">
             <div className={`inline-flex items-center px-6 py-3 rounded-full text-lg font-bold shadow-lg ${
-              overallScore >= 80 ? 'bg-green-100 text-green-800' :
-              overallScore >= 60 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+              result.score >= 80 ? 'bg-green-100 text-green-800' :
+              result.score >= 60 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
             }`}>
               <Shield className="mr-2" size={20} />
-              ICAO Score: {overallScore}%
+              ICAO Score: {result.score}%
             </div>
             <div className="mt-4 bg-gray-100 rounded-full h-3 overflow-hidden">
-              <div 
+              <div
                 className={`h-full transition-all duration-1000 ${
-                  overallScore >= 80 ? 'bg-gradient-to-r from-green-400 to-green-600' :
-                  overallScore >= 60 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' : 
+                  result.score >= 80 ? 'bg-gradient-to-r from-green-400 to-green-600' :
+                  result.score >= 60 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' :
                   'bg-gradient-to-r from-red-400 to-red-600'
                 }`}
-                style={{ width: `${overallScore}%` }}
+                style={{ width: `${result.score}%` }}
               ></div>
             </div>
+            <p className="mt-4 text-gray-600 font-medium">
+              {result.isCompliant ? '✓ ICAO Compliant' : '✗ Not ICAO Compliant'}
+            </p>
           </div>
         </div>
 
         {/* Verification Results */}
         <div className="bg-white rounded-2xl shadow-2xl p-8 border border-gray-100">
           <h3 className="text-2xl font-bold mb-6 flex items-center">
-            <Sparkles className="mr-3 text-purple-600" size={28} />
+            <Sparkles className="mr-3 text-indigo-600" size={28} />
             Detailed Analysis
           </h3>
-          
+
           <div className="space-y-4">
-            {results.map((result, index) => (
-              <div 
-                key={index}
-                className={`p-6 rounded-xl border-2 transition-all duration-300 hover:shadow-lg ${getStatusColor(result.status)}`}
-              >
-                <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0 mt-1">
-                    {getStatusIcon(result.status)}
-                  </div>
-                  <div className="flex-grow">
-                    <div className="flex items-center space-x-2 mb-1">
-                      {result.icon}
-                      <span className="font-bold text-gray-900 text-lg">
-                        {result.category}
-                      </span>
+            {checksList.map((check) => {
+              const checkData = result.checks[check.key as keyof typeof result.checks];
+              return (
+                <div
+                  key={check.key}
+                  className={`p-6 rounded-xl border-2 transition-all duration-300 hover:shadow-lg ${getStatusColor(checkData.passed)}`}
+                >
+                  <div className="flex items-start space-x-3">
+                    <div className="flex-shrink-0 mt-1">
+                      {getStatusIcon(checkData.passed)}
                     </div>
-                    <p className="text-gray-700 mb-3">{result.message}</p>
-                    {result.suggestion && (
-                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
-                        <p className="text-blue-800">
-                          <strong>Suggestion:</strong> {result.suggestion}
-                        </p>
+                    <div className="flex-grow">
+                      <div className="flex items-center space-x-2 mb-1">
+                        {check.icon}
+                        <span className="font-bold text-gray-900 text-lg">
+                          {check.label}
+                        </span>
                       </div>
-                    )}
+                      <p className="text-gray-700">{checkData.message}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
-          <div className="mt-8 p-6 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl">
-            <h4 className="font-bold text-gray-900 mb-4 flex items-center">
-              <Sparkles className="mr-2 text-yellow-500" size={20} />
-              Pro Tips:
-            </h4>
-            <ul className="text-gray-700 space-y-2">
-              <li>• Use our image editor to resize and crop your photo</li>
-              <li>• Ensure proper lighting with no harsh shadows</li>
-              <li>• Take photo against a plain white background</li>
-              <li>• Keep a neutral expression with mouth closed</li>
-            </ul>
-          </div>
+          {/* Suggestions */}
+          {result.suggestions.length > 0 && (
+            <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+              <h4 className="font-bold text-gray-900 mb-4 flex items-center">
+                <Sparkles className="mr-2 text-yellow-500" size={20} />
+                Recommendations:
+              </h4>
+              <ul className="text-gray-700 space-y-2">
+                {result.suggestions.map((suggestion, index) => (
+                  <li key={index} className="flex items-start">
+                    <span className="mr-2">{suggestion.startsWith('✓') ? '✓' : '•'}</span>
+                    <span>{suggestion.replace('✓ ', '')}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
     </div>
