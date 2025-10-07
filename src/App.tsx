@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Upload, CheckCircle, Crop, FileText, Zap, Sparkles, Shield, Moon, Sun, Heart } from 'lucide-react';
+import { Upload, CheckCircle, Crop, FileText, Zap, Sparkles, Shield, Moon, Sun, Heart, Home } from 'lucide-react';
 import PhotoUploader from './components/PhotoUploader';
 import VerificationResults from './components/VerificationResults';
 import ImageEditor from './components/ImageEditor';
@@ -40,8 +40,16 @@ function App() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-colors duration-300">
       <div className="w-full px-4 py-6 md:py-8">
-        {/* Theme Toggle */}
-        <div className="flex justify-end mb-4">
+        {/* Header Controls */}
+        <div className="flex justify-between items-center mb-4">
+          <a
+            href="https://pdfimg.netlify.app/"
+            className="flex items-center space-x-2 p-3 rounded-xl bg-white dark:bg-slate-800 shadow-lg hover:shadow-xl transition-all duration-300 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
+            aria-label="Home"
+          >
+            <Home size={20} />
+            <span className="hidden sm:inline font-semibold">Home</span>
+          </a>
           <button
             onClick={() => setIsDarkMode(!isDarkMode)}
             className="p-3 rounded-xl bg-white dark:bg-slate-800 shadow-lg hover:shadow-xl transition-all duration-300 text-gray-700 dark:text-gray-300"
